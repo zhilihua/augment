@@ -260,7 +260,7 @@ class CropPad:
             else:
                 return image
 
-class RandomPatch:   #明天看内容！！！！！！！！！！！！！！！！！！！！！！！
+class RandomPatch:
 
     def __init__(self,
                  patch_coord_generator,
