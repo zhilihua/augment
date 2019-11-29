@@ -10,7 +10,7 @@ from object_detection_2d_patch_sampling import PatchCoordinateGenerator, RandomP
 from object_detection_2d_geometric import ResizeRandomInterp, RandomFlip
 from object_detection_2d_image_boxes_validation_utils import BoundGenerator, BoxFilter, ImageValidator
 
-class SSDRandomCrop:
+class RandomCrop:
     '''
     执行`batch_sampler`指令所定义的随机裁剪。
     '''
@@ -71,7 +71,7 @@ class SSDRandomCrop:
         self.random_crop.labels_format = self.labels_format
         return self.random_crop(image, labels, return_inverter)
 
-class SSDExpand:
+class Expand:
     '''
     执行“ train_transform_param”指令所定义的随机图像扩展。
     '''
@@ -107,7 +107,7 @@ class SSDExpand:
         self.expand.labels_format = self.labels_format
         return self.expand(image, labels, return_inverter)
 
-class SSDPhotometricDistortions:
+class PhotometricDistortions:
     '''
     执行“ train_transform_param”指令定义的光学变换。
     '''
@@ -165,7 +165,7 @@ class SSDPhotometricDistortions:
                 image, labels = transform(image, labels)
             return image, labels
 
-class SSDDataAugmentation:
+class DataAugmentation:
     '''
     实现的数据增强管道。
     '''
@@ -185,9 +185,9 @@ class SSDDataAugmentation:
 
         self.labels_format = labels_format
 
-        self.photometric_distortions = SSDPhotometricDistortions()
-        self.expand = SSDExpand(background=background, labels_format=self.labels_format)
-        self.random_crop = SSDRandomCrop(labels_format=self.labels_format)
+        self.photometric_distortions = PhotometricDistortions()
+        self.expand = Expand(background=background, labels_format=self.labels_format)
+        self.random_crop = RandomCrop(labels_format=self.labels_format)
         self.random_flip = RandomFlip(dim='horizontal', prob=0.5, labels_format=self.labels_format)
 
         # 此框过滤器可确保调整大小后的图像不包含任何退化的框。 调整图像大小可能会导致盒子变小。
