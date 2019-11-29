@@ -1,5 +1,6 @@
 from __future__ import division
 import numpy as np
+from object_detection_2d_image_boxes_validation_utils import BoundGenerator, BoxFilter, ImageValidator
 
 class PatchCoordinateGenerator:
     '''
@@ -259,7 +260,7 @@ class CropPad:
             else:
                 return image
 
-class RandomPatch:
+class RandomPatch:   #明天看内容！！！！！！！！！！！！！！！！！！！！！！！
 
     def __init__(self,
                  patch_coord_generator,
@@ -317,7 +318,7 @@ class RandomPatch:
 
     def __call__(self, image, labels=None, return_inverter=False):
 
-        p = np.random.uniform(0,1)
+        p = np.random.uniform(0, 1)
         if p >= (1.0-self.prob):
 
             img_height, img_width = image.shape[:2]
@@ -358,7 +359,7 @@ class RandomPatch:
                                             image_width=patch_width):
                         return self.sample_patch(image, labels, return_inverter)
 
-            # 如果我们不能够采样到一个有效的补丁...
+            # 如果我们不能够采样到一个有效的补丁...，这一部分没有
             if self.can_fail:
                 # ...返回 `None`.
                 if labels is None:
@@ -399,3 +400,134 @@ class RandomPatch:
                     return image, labels, inverter
                 else:
                     return image, labels
+
+
+class RandomPatchInf:
+
+    def __init__(self,
+                 patch_coord_generator,
+                 box_filter=None,
+                 image_validator=None,
+                 bound_generator=None,
+                 n_trials_max=50,
+                 clip_boxes=True,
+                 prob=0.857,
+                 background=(0, 0, 0),
+                 labels_format={'class_id': 0, 'xmin': 1, 'ymin': 2, 'xmax': 3, 'ymax': 4}):
+        '''
+        Arguments:
+            patch_coord_generator (PatchCoordinateGenerator): 一个`PatchCoordinateGenerator`对象用于生成补丁的
+            位置和尺寸，补丁采样于输入图片
+            box_filter (BoxFilter, optional): 仅仅涉及如果真值包围框给定情况下。
+                一个BoxFilter对象，用于过滤转换后不满足给定条件的边界框。如果是`None`,
+                包围框的验证不进行检测。
+            image_validator (ImageValidator, optional): 仅仅涉及如果真值包围框给定情况下。
+                一个`ImageValidator`对象用于决定是否一个采样补丁是有效的。如果是`None`，所有的输出都是有效的。
+            bound_generator (BoundGenerator, optional): 一个“ BoundGenerator”对象，为补丁验证器生成上限和下限值。
+             每进行一次n_trials_max次试验，都会生成一对新的上下限，直到找到有效的补丁或返回原始图像为止。
+              此绑定生成器将覆盖补丁验证器的绑定生成器。
+            n_trials_max (int, optional): 仅仅涉及如果真值包围框给定情况下。
+                决定采样一个有效补丁的最大实验次数。如果没有有效补丁能够被采样到在`n_trials_max`次内，
+                返回一个None。
+            clip_boxes (bool, optional): 仅仅涉及如果真值包围框给定情况下。
+                如果为True，
+                如果 `True`, 任何真值包围框都将被裁剪为完全位于采样补丁中。
+            prob (float, optional): `(1 - prob)` 决定随机采样的概率。
+            background (list/tuple, optional): 一个三元组，指定缩放图像的潜在背景像素的RGB颜色值。
+             在单通道的图片中，第一个值将被使用。
+            labels_format (dict, optional): 一个字典，它定义图像标签的最后一个轴中的哪个索引包含哪个边界框坐标。
+        '''
+
+        if not isinstance(patch_coord_generator, PatchCoordinateGenerator):
+            raise ValueError("`patch_coord_generator` must be an instance of `PatchCoordinateGenerator`.")
+        if not (isinstance(image_validator, ImageValidator) or image_validator is None):
+            raise ValueError("`image_validator` must be either `None` or an `ImageValidator` object.")
+        if not (isinstance(bound_generator, BoundGenerator) or bound_generator is None):
+            raise ValueError("`bound_generator` must be either `None` or a `BoundGenerator` object.")
+        self.patch_coord_generator = patch_coord_generator
+        self.box_filter = box_filter
+        self.image_validator = image_validator
+        self.bound_generator = bound_generator
+        self.n_trials_max = n_trials_max
+        self.clip_boxes = clip_boxes
+        self.prob = prob
+        self.background = background
+        self.labels_format = labels_format
+        self.sample_patch = CropPad(patch_ymin=None,
+                                    patch_xmin=None,
+                                    patch_height=None,
+                                    patch_width=None,
+                                    clip_boxes=self.clip_boxes,
+                                    box_filter=self.box_filter,
+                                    background=self.background,
+                                    labels_format=self.labels_format)
+
+    def __call__(self, image, labels=None, return_inverter=False):
+
+        img_height, img_width = image.shape[:2]
+        self.patch_coord_generator.img_height = img_height
+        self.patch_coord_generator.img_width = img_width
+
+        xmin = self.labels_format['xmin']
+        ymin = self.labels_format['ymin']
+        xmax = self.labels_format['xmax']
+        ymax = self.labels_format['ymax']
+
+        # 覆盖预设标签格式。
+        if not self.image_validator is None:
+            self.image_validator.labels_format = self.labels_format
+        self.sample_patch.labels_format = self.labels_format
+
+        while True: # 持续运行知道我们发现一个有效的补丁或者返回原始图像。
+
+            p = np.random.uniform(0,1)
+            if p >= (1.0-self.prob):
+
+                # 如果我们有绑定生成器，请为补丁验证器选择下限和上限。
+                if not ((self.image_validator is None) or (self.bound_generator is None)):
+                    self.image_validator.bounds = self.bound_generator()
+
+                # 最多使用`self.n_trials_max`尝试找到符合我们要求的裁剪区域。
+                for _ in range(max(1, self.n_trials_max)):
+
+                    # 生成补丁坐标。
+                    patch_ymin, patch_xmin, patch_height, patch_width = self.patch_coord_generator()
+
+                    self.sample_patch.patch_ymin = patch_ymin
+                    self.sample_patch.patch_xmin = patch_xmin
+                    self.sample_patch.patch_height = patch_height
+                    self.sample_patch.patch_width = patch_width
+
+                    # 检查生成的补丁是否符合长宽比要求。
+                    aspect_ratio = patch_width / patch_height
+                    if not (self.patch_coord_generator.min_aspect_ratio <= aspect_ratio <= self.patch_coord_generator.max_aspect_ratio):
+                        continue
+
+                    if (labels is None) or (self.image_validator is None):
+                        # 我们没有任何框，或者如果有，我们将接受任何有效的结果。
+                        return self.sample_patch(image, labels, return_inverter)
+                    else:
+                        # 将框坐标转换为补丁的坐标系。
+                        new_labels = np.copy(labels)
+                        new_labels[:, [ymin, ymax]] -= patch_ymin
+                        new_labels[:, [xmin, xmax]] -= patch_xmin
+                        # 检查补丁是否包含我们要求的最少包围框数。
+                        if self.image_validator(labels=new_labels,
+                                                image_height=patch_height,
+                                                image_width=patch_width):
+                            return self.sample_patch(image, labels, return_inverter)
+            else:
+                if return_inverter:
+                    def inverter(labels):
+                        return labels
+
+                if labels is None:
+                    if return_inverter:
+                        return image, inverter
+                    else:
+                        return image
+                else:
+                    if return_inverter:
+                        return image, labels, inverter
+                    else:
+                        return image, labels
