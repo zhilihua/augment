@@ -232,3 +232,23 @@ class DataAugmentation:
             return image, labels, inverters[::-1]
         else:
             return image, labels
+
+if __name__ == '__main__':
+    #展示效果
+    from PIL import Image
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    labels = [[0, 174, 101, 349, 351]]
+    img = np.array(Image.open('dataset/2007_000027.jpg'))
+
+    #进行数据增广
+
+
+    plt.imshow(img)
+    rect = plt.Rectangle((labels[0][1], labels[0][2]), labels[0][3]-labels[0][1],
+                         labels[0][4]-labels[0][2], color='r', fill=False, linewidth=2)  # 左下起点，长，宽，颜色
+    #画矩形框
+    plt.gca().add_patch(rect)
+
+    plt.show()
