@@ -239,11 +239,9 @@ if __name__ == '__main__':
     import numpy as np
     import matplotlib.pyplot as plt
 
-    # labels = np.array([[0, 174, 101, 349, 351]])
-    # img = np.array(Image.open('dataset/2007_000027.jpg'))
-
     #进行数据增广,并设定循环次数
     for i in range(10):
+        #labels格式为[m, 5]：m代表包围框的个数，5分别代表，属于哪一类、xmin、ymin、xmax、ymax
         labels = np.array([[0, 174, 101, 349, 351]])
         img = np.array(Image.open('dataset/2007_000027.jpg'))
 
