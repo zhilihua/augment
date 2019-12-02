@@ -239,16 +239,40 @@ if __name__ == '__main__':
     import numpy as np
     import matplotlib.pyplot as plt
 
-    labels = [[0, 174, 101, 349, 351]]
-    img = np.array(Image.open('dataset/2007_000027.jpg'))
+    # labels = np.array([[0, 174, 101, 349, 351]])
+    # img = np.array(Image.open('dataset/2007_000027.jpg'))
 
-    #进行数据增广
+    #进行数据增广,并设定循环次数
+    for i in range(10):
+        labels = np.array([[0, 174, 101, 349, 351]])
+        img = np.array(Image.open('dataset/2007_000027.jpg'))
 
+        try:
+            #==================显示原图=====================
+            plt.subplot(1, 2, 1)
+            plt.imshow(img)
+            rect = plt.Rectangle((labels[0][1], labels[0][2]), labels[0][3] - labels[0][1],
+                                 labels[0][4] - labels[0][2], color='r', fill=False, linewidth=2)  # 左下起点，长，宽，颜色
+            # 画矩形框
+            plt.gca().add_patch(rect)
+            plt.axis('off')     #去掉坐标轴
+            plt.title("original image")   #添加标题
+            #==============================================
 
-    plt.imshow(img)
-    rect = plt.Rectangle((labels[0][1], labels[0][2]), labels[0][3]-labels[0][1],
-                         labels[0][4]-labels[0][2], color='r', fill=False, linewidth=2)  # 左下起点，长，宽，颜色
-    #画矩形框
-    plt.gca().add_patch(rect)
+            #==================显示增广图==================
+            plt.subplot(1, 2, 2)
+            DataAugmen = DataAugmentation()
+            img, labels = DataAugmen(img, labels)
+            print(labels)
 
-    plt.show()
+            plt.imshow(img)
+            rect = plt.Rectangle((labels[0][1], labels[0][2]), labels[0][3]-labels[0][1],
+                                 labels[0][4]-labels[0][2], color='r', fill=False, linewidth=2)  # 左下起点，长，宽，颜色
+            #画矩形框
+            plt.gca().add_patch(rect)
+            plt.axis('off')
+            plt.title("augment image")
+
+            plt.show()
+        except Exception:
+            continue
